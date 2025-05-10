@@ -7,6 +7,9 @@ import { ToastContainer } from "@/components/ExtensionToast";
 import { useToast } from "@/hooks/use-toast";
 import { Check, Copy, FileText, Share2 } from "lucide-react";
 
+// Check if we're running in a browser extension environment
+const isExtensionEnvironment = typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
+
 const Index = () => {
   const [loading, setLoading] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
@@ -15,55 +18,79 @@ const Index = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Load any saved summary from storage
-    chrome.storage.local.get(['chatSummary'], (result) => {
-      if (result.chatSummary) {
-        setSummary(result.chatSummary);
-      }
-    });
+    // Load any saved summary from storage if we're in an extension environment
+    if (isExtensionEnvironment) {
+      chrome.storage.local.get(['chatSummary'], (result) => {
+        if (result.chatSummary) {
+          setSummary(result.chatSummary);
+        }
+      });
+    } else {
+      // For web demo mode, show a sample summary
+      setSummary("# Previous AI Conversation Context\n\n## Main Topics Discussed\n- How to implement a state management solution for a React application\n- Comparing Redux vs. Context API for different use cases\n- Optimizing React component re-renders\n\n## Instructions for AI\nPlease consider the above context from my previous conversation when responding to my next queries. I'm continuing a discussion that started in another chat.\n\n");
+    }
   }, []);
 
   const captureChat = async () => {
     setLoading(true);
     
     try {
-      // Get the active tab
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const activeTab = tabs[0];
-      
-      if (!activeTab.id) {
-        throw new Error("No active tab found");
-      }
-      
-      // Extract conversation from the page
-      const response = await chrome.tabs.sendMessage(activeTab.id, { action: 'extractConversation' });
-      
-      if (response && response.conversation) {
-        // Show summarizing state
+      if (isExtensionEnvironment) {
+        // Get the active tab
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+          const activeTab = tabs[0];
+          
+          if (!activeTab.id) {
+            throw new Error("No active tab found");
+          }
+          
+          // Extract conversation from the page
+          chrome.tabs.sendMessage(activeTab.id, { action: 'extractConversation' }, async (response) => {
+            if (response && response.conversation) {
+              // Show summarizing state
+              setSummarizing(true);
+              setLoading(false);
+              
+              // Create a summary
+              const summaryText = await generateSummary(response.conversation);
+              
+              setSummary(summaryText);
+              setSummarizing(false);
+              
+              // Save to storage
+              chrome.storage.local.set({ chatSummary: summaryText });
+              
+              toast({
+                title: "Chat captured!",
+                description: "Summary generated and ready to share",
+              });
+            } else {
+              throw new Error("Could not extract conversation");
+            }
+          });
+        });
+      } else {
+        // Web demo mode simulation
         setSummarizing(true);
         setLoading(false);
         
-        // Create a summary
-        const summaryText = await generateSummary(response.conversation);
+        // Simulate delay of processing
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        setSummary(summaryText);
+        const demoSummary = "# Previous AI Conversation Context\n\n## Main Topics Discussed\n- How to implement a state management solution for a React application\n- Comparing Redux vs. Context API for different use cases\n- Optimizing React component re-renders\n\n## Instructions for AI\nPlease consider the above context from my previous conversation when responding to my next queries. I'm continuing a discussion that started in another chat.\n\n";
+        setSummary(demoSummary);
         setSummarizing(false);
-        
-        // Save to storage
-        chrome.storage.local.set({ chatSummary: summaryText });
         
         toast({
           title: "Chat captured!",
-          description: "Summary generated and ready to share",
+          description: "Summary generated and ready to share (Demo Mode)",
         });
-      } else {
-        throw new Error("Could not extract conversation");
       }
     } catch (error) {
       console.error("Error capturing chat:", error);
       toast({
         title: "Error capturing chat",
-        description: "Please make sure you're on a supported AI chat page",
+        description: isExtensionEnvironment ? "Please make sure you're on a supported AI chat page" : "Demo mode error",
         variant: "destructive",
       });
       setLoading(false);
@@ -77,24 +104,34 @@ const Index = () => {
     setLoading(true);
     
     try {
-      // Get the active tab
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const activeTab = tabs[0];
-      
-      if (!activeTab.id) {
-        throw new Error("No active tab found");
+      if (isExtensionEnvironment) {
+        // Get the active tab
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+          const activeTab = tabs[0];
+          
+          if (!activeTab.id) {
+            throw new Error("No active tab found");
+          }
+          
+          // Send the summary to the content script for pasting
+          chrome.tabs.sendMessage(activeTab.id, { 
+            action: 'pasteIntoChat', 
+            summary: summary 
+          });
+          
+          toast({
+            title: "Context shared!",
+            description: "Summary pasted into the current chat",
+          });
+        });
+      } else {
+        // Web demo mode simulation
+        await new Promise(resolve => setTimeout(resolve, 500));
+        toast({
+          title: "Context shared!",
+          description: "Summary pasted into the current chat (Demo Mode)",
+        });
       }
-      
-      // Send the summary to the content script for pasting
-      await chrome.tabs.sendMessage(activeTab.id, { 
-        action: 'pasteIntoChat', 
-        summary: summary 
-      });
-      
-      toast({
-        title: "Context shared!",
-        description: "Summary pasted into the current chat",
-      });
     } catch (error) {
       console.error("Error pasting into chat:", error);
       toast({
@@ -131,7 +168,6 @@ const Index = () => {
   };
 
   // Function to generate a summary of the conversation
-  // This is a simple implementation - would be better with a proper AI model
   const generateSummary = async (conversation: string): Promise<string> => {
     // Simulate AI processing time for demo purposes
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -160,7 +196,9 @@ const Index = () => {
       <Card className="w-80 p-5 shadow-md">
         <h1 className="text-2xl font-bold text-center mb-2 text-blue-700">AI Context Sharer</h1>
         <p className="text-gray-600 text-center mb-4 text-sm">
-          Capture and share context between AI chats
+          {isExtensionEnvironment ? 
+            "Capture and share context between AI chats" : 
+            "Demo Mode - Extension features limited"}
         </p>
         
         <div className="flex flex-col gap-3">
@@ -211,7 +249,9 @@ const Index = () => {
         </div>
         
         <div className="mt-4 text-xs text-gray-500 text-center">
-          Works with ChatGPT, Claude, Gemini, Perplexity & more
+          {isExtensionEnvironment ? 
+            "Works with ChatGPT, Claude, Gemini, Perplexity & more" : 
+            "Web demo - Install extension for full functionality"}
         </div>
       </Card>
       
