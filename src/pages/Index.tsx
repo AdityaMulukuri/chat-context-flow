@@ -8,7 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Check, Copy, FileText, Share2 } from "lucide-react";
 
 // Check if we're running in a browser extension environment
-const isExtensionEnvironment = typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
+const isExtensionEnvironment = 
+  typeof window !== 'undefined' && 
+  typeof chrome !== 'undefined' && 
+  chrome.storage && 
+  chrome.storage.local;
 
 const Index = () => {
   const [loading, setLoading] = useState(false);
@@ -20,11 +24,15 @@ const Index = () => {
   useEffect(() => {
     // Load any saved summary from storage if we're in an extension environment
     if (isExtensionEnvironment) {
-      chrome.storage.local.get(['chatSummary'], (result) => {
-        if (result.chatSummary) {
-          setSummary(result.chatSummary);
-        }
-      });
+      try {
+        chrome.storage.local.get(['chatSummary'], (result) => {
+          if (result.chatSummary) {
+            setSummary(result.chatSummary);
+          }
+        });
+      } catch (error) {
+        console.error("Error accessing chrome storage:", error);
+      }
     } else {
       // For web demo mode, show a sample summary
       setSummary("# Previous AI Conversation Context\n\n## Main Topics Discussed\n- How to implement a state management solution for a React application\n- Comparing Redux vs. Context API for different use cases\n- Optimizing React component re-renders\n\n## Instructions for AI\nPlease consider the above context from my previous conversation when responding to my next queries. I'm continuing a discussion that started in another chat.\n\n");

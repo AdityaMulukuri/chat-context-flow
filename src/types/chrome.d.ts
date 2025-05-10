@@ -20,8 +20,9 @@ declare namespace chrome {
   }
   namespace runtime {
     function sendMessage(message: any, responseCallback?: (response: any) => void): void;
-    function onMessage: {
+    interface MessageListener {
       addListener(callback: (message: any, sender: any, sendResponse: (response?: any) => void) => void): void;
-    };
+    }
+    const onMessage: MessageListener;
   }
 }
