@@ -2,17 +2,33 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Check, Copy } from "lucide-react";
+import LoadingSpinner from './LoadingSpinner';
 
 interface SummaryDisplayProps {
   summary: string;
   copied: boolean;
   onCopy: () => void;
+  isLoading?: boolean;
 }
 
-const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ summary, copied, onCopy }) => {
+const SummaryDisplay: React.FC<SummaryDisplayProps> = ({ 
+  summary, 
+  copied, 
+  onCopy, 
+  isLoading = false 
+}) => {
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-10">
+        <LoadingSpinner size="lg" />
+        <p className="text-sm text-gray-500">Generating detailed summary...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm text-gray-700 max-h-[200px] overflow-y-auto mb-2 whitespace-pre-wrap">
+      <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm text-gray-700 max-h-[300px] overflow-y-auto mb-2 whitespace-pre-wrap markdown-content">
         {summary}
       </div>
       
