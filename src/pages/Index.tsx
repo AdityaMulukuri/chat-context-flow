@@ -30,13 +30,13 @@ const Index = () => {
     setLoading(true);
     
     try {
-      // Generate the detailed summary
+      // Generate the OpenAI-powered summary
       const summaryText = await generateSummary(inputText);
       setSummary(summaryText);
       
       toast({
-        title: "Detailed summary created!",
-        description: "Your AI conversation has been analyzed and summarized",
+        title: "AI summary created!",
+        description: "Your conversation has been analyzed and summarized",
       });
     } catch (error) {
       console.error("Error summarizing:", error);
@@ -78,7 +78,7 @@ const Index = () => {
       <Card className="w-full max-w-3xl p-5 shadow-md">
         <h1 className="text-2xl font-bold text-center mb-2 text-blue-700">AI Context Sharer</h1>
         <p className="text-gray-600 text-center mb-4 text-sm">
-          Share detailed context between AI conversations easily
+          Share detailed context between AI conversations with OpenAI-powered summaries
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -99,12 +99,12 @@ const Index = () => {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <LoadingSpinner size="sm" />
-                  <span>Generating detailed summary...</span>
+                  <span>Generating AI summary...</span>
                 </div>
               ) : (
                 <>
                   <FileText className="mr-2 h-4 w-4" />
-                  Create Detailed Summary
+                  Create AI-Powered Summary
                 </>
               )}
             </Button>
@@ -112,7 +112,7 @@ const Index = () => {
           
           {/* Output Section */}
           <div className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold text-blue-600">Step 2: Get your detailed summary</h2>
+            <h2 className="text-lg font-semibold text-blue-600">Step 2: Get your AI-powered summary</h2>
             
             <SummaryDisplay 
               summary={summary || ''}
@@ -126,7 +126,7 @@ const Index = () => {
         <Separator className="my-4" />
         
         <div className="text-sm text-gray-500 text-center">
-          <p>Our AI analyzes your conversation to create a comprehensive summary with key topics, code snippets, and conversation flow.</p>
+          <p>Our app uses OpenAI to create a comprehensive summary of your conversation, with key topics, code snippets, and conversation flow.</p>
         </div>
       </Card>
     </div>
