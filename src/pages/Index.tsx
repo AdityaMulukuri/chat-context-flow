@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText } from "lucide-react";
+import { FileText, Copy, Check } from "lucide-react";
 import SummaryDisplay from '@/components/SummaryDisplay';
 import { useToast } from "@/hooks/use-toast";
 import { generateSummary } from '@/utils/summaryGenerator';
@@ -74,61 +74,75 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-      <Card className="w-full max-w-3xl p-5 shadow-md">
-        <h1 className="text-2xl font-bold text-center mb-2 text-blue-700">AI Context Sharer</h1>
-        <p className="text-gray-600 text-center mb-4 text-sm">
-          Share detailed context between AI conversations with OpenAI-powered summaries
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Input Section */}
-          <div className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold text-blue-600">Step 1: Paste your AI conversation</h2>
-            <Textarea 
-              placeholder="Paste your conversation with an AI here..."
-              className="min-h-[200px] text-sm"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-            />
-            <Button 
-              onClick={handleSummarize} 
-              disabled={loading || !inputText.trim()}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {loading ? (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 flex flex-col items-center">
+      <div className="w-full max-w-5xl">
+        <header className="text-center mb-8 pt-6">
+          <h1 className="text-3xl font-bold text-blue-700 mb-2">AI Context Sharer</h1>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Transfer context between AI conversations with intelligent summaries powered by OpenAI
+          </p>
+        </header>
+
+        <Card className="w-full shadow-lg border-blue-100 overflow-hidden">
+          <div className="p-6 bg-white rounded-t-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Input Section */}
+              <div className="flex flex-col gap-4">
                 <div className="flex items-center gap-2">
-                  <LoadingSpinner size="sm" />
-                  <span>Generating AI summary...</span>
+                  <div className="bg-blue-100 rounded-full w-8 h-8 flex items-center justify-center text-blue-700 font-bold">1</div>
+                  <h2 className="text-xl font-semibold text-gray-800">Paste your AI conversation</h2>
                 </div>
-              ) : (
-                <>
-                  <FileText className="mr-2 h-4 w-4" />
-                  Create AI-Powered Summary
-                </>
-              )}
-            </Button>
+                
+                <Textarea 
+                  placeholder="Copy and paste your conversation with an AI assistant here..."
+                  className="min-h-[280px] text-sm border-blue-200 focus:border-blue-400"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                />
+                
+                <Button 
+                  onClick={handleSummarize} 
+                  disabled={loading || !inputText.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {loading ? (
+                    <div className="flex items-center gap-2">
+                      <LoadingSpinner size="sm" />
+                      <span>Generating summary...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Generate AI Summary
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {/* Output Section */}
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-blue-100 rounded-full w-8 h-8 flex items-center justify-center text-blue-700 font-bold">2</div>
+                  <h2 className="text-xl font-semibold text-gray-800">Get your AI-powered summary</h2>
+                </div>
+                
+                <SummaryDisplay 
+                  summary={summary || ''}
+                  copied={copied}
+                  onCopy={copyToClipboard}
+                  isLoading={loading}
+                />
+              </div>
+            </div>
           </div>
           
-          {/* Output Section */}
-          <div className="flex flex-col gap-3">
-            <h2 className="text-lg font-semibold text-blue-600">Step 2: Get your AI-powered summary</h2>
-            
-            <SummaryDisplay 
-              summary={summary || ''}
-              copied={copied}
-              onCopy={copyToClipboard}
-              isLoading={loading}
-            />
+          <div className="bg-blue-50 p-4 border-t border-blue-100">
+            <div className="text-sm text-blue-700 text-center max-w-2xl mx-auto">
+              <p>Your conversations are analyzed by OpenAI to create comprehensive summaries capturing key topics, code snippets, and conversation flow.</p>
+            </div>
           </div>
-        </div>
-        
-        <Separator className="my-4" />
-        
-        <div className="text-sm text-gray-500 text-center">
-          <p>Our app uses OpenAI to create a comprehensive summary of your conversation, with key topics, code snippets, and conversation flow.</p>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };
