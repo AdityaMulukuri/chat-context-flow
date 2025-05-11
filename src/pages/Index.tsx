@@ -1,155 +1,55 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ToastContainer } from "@/components/ExtensionToast";
+import { Textarea } from "@/components/ui/textarea";
+import { Check, Copy, FileText } from "lucide-react";
+import SummaryDisplay from '@/components/SummaryDisplay';
 import { useToast } from "@/hooks/use-toast";
-import { Check, Copy, FileText, Share2 } from "lucide-react";
-
-// Check if we're running in a browser extension environment
-const isExtensionEnvironment = 
-  typeof window !== 'undefined' && 
-  typeof chrome !== 'undefined' && 
-  chrome.storage && 
-  chrome.storage.local;
+import { generateSummary } from '@/utils/summaryGenerator';
 
 const Index = () => {
+  const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [summarizing, setSummarizing] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Load any saved summary from storage if we're in an extension environment
-    if (isExtensionEnvironment) {
-      try {
-        chrome.storage.local.get(['chatSummary'], (result) => {
-          if (result.chatSummary) {
-            setSummary(result.chatSummary);
-          }
-        });
-      } catch (error) {
-        console.error("Error accessing chrome storage:", error);
-      }
-    } else {
-      // For web demo mode, show a sample summary
-      setSummary("# Previous AI Conversation Context\n\n## Main Topics Discussed\n- How to implement a state management solution for a React application\n- Comparing Redux vs. Context API for different use cases\n- Optimizing React component re-renders\n\n## Instructions for AI\nPlease consider the above context from my previous conversation when responding to my next queries. I'm continuing a discussion that started in another chat.\n\n");
+  const handleSummarize = async () => {
+    if (!inputText.trim()) {
+      toast({
+        title: "No content to summarize",
+        description: "Please paste some conversation text first",
+        variant: "destructive",
+      });
+      return;
     }
-  }, []);
-
-  const captureChat = async () => {
+    
     setLoading(true);
     
     try {
-      if (isExtensionEnvironment) {
-        // Get the active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-          const activeTab = tabs[0];
-          
-          if (!activeTab.id) {
-            throw new Error("No active tab found");
-          }
-          
-          // Extract conversation from the page
-          chrome.tabs.sendMessage(activeTab.id, { action: 'extractConversation' }, async (response) => {
-            if (response && response.conversation) {
-              // Show summarizing state
-              setSummarizing(true);
-              setLoading(false);
-              
-              // Create a summary
-              const summaryText = await generateSummary(response.conversation);
-              
-              setSummary(summaryText);
-              setSummarizing(false);
-              
-              // Save to storage
-              chrome.storage.local.set({ chatSummary: summaryText });
-              
-              toast({
-                title: "Chat captured!",
-                description: "Summary generated and ready to share",
-              });
-            } else {
-              throw new Error("Could not extract conversation");
-            }
-          });
-        });
-      } else {
-        // Web demo mode simulation
-        setSummarizing(true);
-        setLoading(false);
-        
-        // Simulate delay of processing
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        const demoSummary = "# Previous AI Conversation Context\n\n## Main Topics Discussed\n- How to implement a state management solution for a React application\n- Comparing Redux vs. Context API for different use cases\n- Optimizing React component re-renders\n\n## Instructions for AI\nPlease consider the above context from my previous conversation when responding to my next queries. I'm continuing a discussion that started in another chat.\n\n";
-        setSummary(demoSummary);
-        setSummarizing(false);
-        
-        toast({
-          title: "Chat captured!",
-          description: "Summary generated and ready to share (Demo Mode)",
-        });
-      }
-    } catch (error) {
-      console.error("Error capturing chat:", error);
+      // Simulate processing time
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Generate the summary
+      const summaryText = await generateSummary(inputText);
+      setSummary(summaryText);
+      
       toast({
-        title: "Error capturing chat",
-        description: isExtensionEnvironment ? "Please make sure you're on a supported AI chat page" : "Demo mode error",
+        title: "Summary created!",
+        description: "Your AI conversation has been summarized",
+      });
+    } catch (error) {
+      console.error("Error summarizing:", error);
+      toast({
+        title: "Error creating summary",
+        description: "Please try again with different content",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
-      setSummarizing(false);
     }
-  };
-
-  const pasteIntoChat = async () => {
-    if (!summary) return;
-    
-    setLoading(true);
-    
-    try {
-      if (isExtensionEnvironment) {
-        // Get the active tab
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-          const activeTab = tabs[0];
-          
-          if (!activeTab.id) {
-            throw new Error("No active tab found");
-          }
-          
-          // Send the summary to the content script for pasting
-          chrome.tabs.sendMessage(activeTab.id, { 
-            action: 'pasteIntoChat', 
-            summary: summary 
-          });
-          
-          toast({
-            title: "Context shared!",
-            description: "Summary pasted into the current chat",
-          });
-        });
-      } else {
-        // Web demo mode simulation
-        await new Promise(resolve => setTimeout(resolve, 500));
-        toast({
-          title: "Context shared!",
-          description: "Summary pasted into the current chat (Demo Mode)",
-        });
-      }
-    } catch (error) {
-      console.error("Error pasting into chat:", error);
-      toast({
-        title: "Error sharing context",
-        description: "Please make sure you're on a supported AI chat page",
-        variant: "destructive",
-      });
-    }
-    
-    setLoading(false);
   };
 
   const copyToClipboard = () => {
@@ -169,101 +69,70 @@ const Index = () => {
         console.error("Error copying to clipboard:", err);
         toast({
           title: "Error copying",
-          description: "Please try again",
+          description: "Please try again or select and copy manually",
           variant: "destructive",
         });
       });
   };
 
-  // Function to generate a summary of the conversation
-  const generateSummary = async (conversation: string): Promise<string> => {
-    // Simulate AI processing time for demo purposes
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Simple extraction of main points - in a real implementation,
-    // you would use a proper summarization algorithm or API
-    const lines = conversation.split('\n').filter(line => line.trim().length > 0);
-    const userQueries = lines.filter(line => line.startsWith('User:'))
-                            .map(line => line.replace('User:', '').trim())
-                            .filter(line => line.length > 10)
-                            .slice(0, 5); // Get up to 5 significant user queries
-    
-    // Create the README format
-    const title = "# Previous AI Conversation Context\n\n";
-    const mainTopics = userQueries.length > 0
-      ? "## Main Topics Discussed\n" + userQueries.map(q => `- ${q}`).join('\n') + '\n\n'
-      : "## Context\n- Sharing conversation from another AI chat\n\n";
-    
-    const instructions = "## Instructions for AI\nPlease consider the above context from my previous conversation when responding to my next queries. I'm continuing a discussion that started in another chat.\n\n";
-    
-    return title + mainTopics + instructions;
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
-      <Card className="w-80 p-5 shadow-md">
+      <Card className="w-full max-w-3xl p-5 shadow-md">
         <h1 className="text-2xl font-bold text-center mb-2 text-blue-700">AI Context Sharer</h1>
         <p className="text-gray-600 text-center mb-4 text-sm">
-          {isExtensionEnvironment ? 
-            "Capture and share context between AI chats" : 
-            "Demo Mode - Extension features limited"}
+          Share context between AI conversations easily
         </p>
         
-        <div className="flex flex-col gap-3">
-          <Button 
-            onClick={captureChat} 
-            disabled={loading || summarizing}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {summarizing ? (
-              <>Summarizing...</>
-            ) : (
-              <>
-                <FileText className="mr-2 h-4 w-4" />
-                Capture Current Chat
-              </>
-            )}
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Input Section */}
+          <div className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold text-blue-600">Step 1: Paste your AI conversation</h2>
+            <Textarea 
+              placeholder="Paste your conversation with an AI here..."
+              className="min-h-[200px] text-sm"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+            />
+            <Button 
+              onClick={handleSummarize} 
+              disabled={loading || !inputText.trim()}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {loading ? (
+                <>Summarizing...</>
+              ) : (
+                <>
+                  <FileText className="mr-2 h-4 w-4" />
+                  Create Summary
+                </>
+              )}
+            </Button>
+          </div>
           
-          {summary && (
-            <>
-              <Separator className="my-2" />
-              
-              <div className="bg-gray-50 p-3 rounded-md border border-gray-200 text-sm text-gray-700 max-h-32 overflow-y-auto mb-2">
-                <pre className="whitespace-pre-wrap">{summary.substring(0, 150)}...</pre>
+          {/* Output Section */}
+          <div className="flex flex-col gap-3">
+            <h2 className="text-lg font-semibold text-blue-600">Step 2: Get your summary</h2>
+            
+            {summary ? (
+              <SummaryDisplay 
+                summary={summary} 
+                copied={copied}
+                onCopy={copyToClipboard}
+              />
+            ) : (
+              <div className="bg-gray-50 border border-gray-200 rounded-md p-4 min-h-[200px] flex items-center justify-center text-gray-500 text-sm">
+                Your summary will appear here after you create it
               </div>
-              
-              <div className="flex gap-2">
-                <Button
-                  onClick={pasteIntoChat}
-                  disabled={loading || !summary}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700"
-                >
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Paste into Chat
-                </Button>
-                
-                <Button
-                  onClick={copyToClipboard}
-                  disabled={!summary}
-                  variant="outline"
-                  className="px-3"
-                >
-                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                </Button>
-              </div>
-            </>
-          )}
+            )}
+          </div>
         </div>
         
-        <div className="mt-4 text-xs text-gray-500 text-center">
-          {isExtensionEnvironment ? 
-            "Works with ChatGPT, Claude, Gemini, Perplexity & more" : 
-            "Web demo - Install extension for full functionality"}
+        <Separator className="my-4" />
+        
+        <div className="text-sm text-gray-500 text-center">
+          <p>Simply copy your AI conversation, paste it here, then copy the generated summary to your next AI chat.</p>
         </div>
       </Card>
-      
-      <ToastContainer />
     </div>
   );
 };
